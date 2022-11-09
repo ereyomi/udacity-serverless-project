@@ -3,37 +3,39 @@ import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
 import { cors, httpErrorHandler } from 'middy/middlewares'
-import { deleteTodo } from '../../businessLayer/todos'
-import { getUserId } from '../utils'
-import { createLogger } from '../../utils/logger'
 
-const logger = createLogger('deleteTod')
+import { deleteTodo } from '../../businessLogic/todos'
+import { createLogger } from '../../utils/logger'
+import { NO_CONTENT, SERVER_ERROR_STATUS_CODE } from '../../utils/constants';
+
+const logger = createLogger('deleteTodo')
+
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    try {
-      const todoId = event.pathParameters.todoId
-      logger.info('processing event', event)
+    logger.info('deleteTodo event', { event })
 
-      const userId = getUserId(event)
+    try {
+
+      const todoId = event.pathParameters.todoId
+      const userId = event.requestContext.authorizer.principalId
+
       await deleteTodo(userId, todoId)
 
       return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
+        statusCode: NO_CONTENT,
         body: ''
       }
-    } catch (error) {
-      return {
-        statusCode: error?.statusCode || 400,
 
-        body: JSON.stringify({
-          message: error?.message || 'error while trying to delete todo'
-        })
+    }catch(e) {
+      logger.error('Error - deleteTodo: ' + e.message)
+
+      return {
+        statusCode: SERVER_ERROR_STATUS_CODE,
+        body: e.message
       }
     }
+
+    
   }
 )
 

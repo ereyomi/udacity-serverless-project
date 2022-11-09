@@ -3,11 +3,12 @@ org: ereyomi
 app: serverless-todo-app
 service: serverless-todo-app
 
-
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-plugin-tracing
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
 
 provider:
   name: aws
@@ -38,11 +39,27 @@ provider:
             - xray:PutTraceSegments
           Resource: '*'
 
+custom:
+  documentation:
+    api:
+      info:
+        version: '1.0.0'
+        title: serverless todo Api
+        description: Just a serverless todo api
+    models:
+      - name: CreateTodoRequest
+        contentType: 'application/json'
+        schema: ${file(models/create-todo-model.json)}
+
+      - name: UpdateTodoRequest
+        contentType: 'application/json'
+        schema: ${file(models/update-todo-model.json)}
+
 functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  # TODO: Configure this function -
+  # TODO: Configure this function - [done]
   # Provide iamRoleStatements property for performing Actions on DynamoDB
   GetTodos:
     handler: src/lambda/http/getTodos.handler
@@ -63,7 +80,8 @@ functions:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
         Resource: '*'
-  # TODO: Configure this function -
+
+  # TODO: Configure this function - [done]
   # Provide iamRoleStatements property. Decide the Actions and AWS Resource.
   # To refer to an AWS resource defined in the "Resources" section, you can use "Resource: !GetAtt <resource-name>.Arn"
   # To validate incoming HTTP requests, we have provided the request schemas in function definition below.
@@ -76,20 +94,22 @@ functions:
           cors: true
           authorizer: Auth
           request:
-            schemas:
+            # Schema that will be used to validate incoming requests
+            schema:
               application/json: ${file(models/create-todo-model.json)}
     iamRoleStatements:
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
       - Effect: Allow
         Action:
           - dynamodb:PutItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-      - Effect: Allow
-        Action:
-          - xray:PutTraceSegments
-          - xray:PutTelemetryRecords
-        Resource: '*'
 
-  # TODO: Configure this function
+  # TODO: Configure this function - [done]
   # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
@@ -97,18 +117,25 @@ functions:
       - http:
           method: patch
           path: todos/{todoId}
-          authorizer: Auth
           cors: true
+          authorizer: Auth
           request:
-            schemas:
+            schema:
               application/json: ${file(models/update-todo-model.json)}
     iamRoleStatements:
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
-  # TODO: Configure this function
+  # TODO: Configure this function - [done]
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
@@ -116,15 +143,22 @@ functions:
       - http:
           method: delete
           path: todos/{todoId}
-          authorizer: Auth
           cors: true
+          authorizer: Auth
     iamRoleStatements:
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
           - dynamodb:DeleteItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
-  # TODO: Configure this function
+  # TODO: Configure this function - [done]
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
   GenerateUploadUrl:
     handler: src/lambda/http/generateUploadUrl.handler
@@ -151,8 +185,17 @@ functions:
 
 resources:
   Resources:
+    RequestBodyValidator:
+      Type: 'AWS::ApiGateway::RequestValidator'
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+
     # Add necessary AWS resources. You will need at least the following AWS resources
-    # TODO: Fill the properties
+    # TODO: Fill the properties - [done]
     # Feel free to change the names as you like.
 
     GatewayResponseDefault4XX:
@@ -166,7 +209,7 @@ resources:
         RestApiId:
           Ref: ApiGatewayRestApi
 
-    # TODO: Create a DynamoDB table with local secondary index and a composite key
+    # TODO: Create a DynamoDB table with local secondary index and a composite key - [done]
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -194,7 +237,7 @@ resources:
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
 
-    # TODO: Complete the bucket properties below.
+    # TODO: Complete the bucket properties below. - [done]
     # Do not forget to add the CorsConfiguration propoerty
     AttachmentsBucket:
       Type: AWS::S3::Bucket
@@ -215,7 +258,7 @@ resources:
                 - HEAD
               MaxAge: 3000
 
-    # TODO: Complete the policy below and attach it to the bucket defined above
+    # TODO: Complete the policy below and attach it to the bucket defined above - [done]
     # For cross referencing the name of the bucket, use "!Ref AttachmentsBucket"
     BucketPolicy:
       Type: AWS::S3::BucketPolicy

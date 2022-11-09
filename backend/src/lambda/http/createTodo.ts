@@ -5,7 +5,7 @@ import { cors } from 'middy/middlewares'
 import { CreateTodoRequest } from '../../requests/CreateTodoRequest'
 import { getUserId } from '../utils'
 
-import { createTodo } from '../../helpers/todos'
+import { createTodo } from '../../businessLayer/todos'
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -24,18 +24,14 @@ export const handler = middy(
           item: todo
         })
       }
-    } catch (error) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
-        body: JSON.stringify({
-          item: null,
-          message: 'an error occur while trying to create todo'
-        })
-      }
+    } catch ( error ) {
+       return {
+         statusCode: error?.statusCode || 400,
+
+         body: JSON.stringify({
+           message: error?.message || 'error while trying to get create todo'
+         })
+       }
     }
   }
 )

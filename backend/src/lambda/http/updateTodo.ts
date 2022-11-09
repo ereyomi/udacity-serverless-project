@@ -6,7 +6,7 @@ import { cors, httpErrorHandler } from 'middy/middlewares'
 
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { getUserId } from '../utils'
-import { updateTodos } from '../../helpers/todos'
+import { updateTodos } from '../../businessLayer/todos'
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -26,14 +26,10 @@ export const handler = middy(
       }
     } catch (error) {
       return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
+        statusCode: error?.statusCode || 400,
+
         body: JSON.stringify({
-          item: null,
-          message: 'an error occur while trying to update todo'
+          message: error?.message || 'error while trying to update todo'
         })
       }
     }

@@ -2,8 +2,9 @@ import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
 import { cors, httpErrorHandler } from 'middy/middlewares'
-import { getAllTodoById, addAttachment } from '../../helpers/todos'
-import { UploadUrl } from '../../helpers/attachmentUtils'
+
+import { getAllTodoById, addAttachment } from '../../businessLayer/todos'
+import { UploadUrl } from '../../storageLayer/attachmentUtils'
 
 const bucket_Name = process.env.ATTACHMENT_S3_BUCKET
 
@@ -20,24 +21,17 @@ export const handler = middy(
 
       return {
         statusCode: 201,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
+
         body: JSON.stringify({
           uploadUrl: url
         })
       }
     } catch (error) {
       return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
+        statusCode: error?.statusCode || 400,
+
         body: JSON.stringify({
-          item: null,
-          message: 'an error occur while trying to url'
+          message: error?.message || 'error while trying to get url'
         })
       }
     }
